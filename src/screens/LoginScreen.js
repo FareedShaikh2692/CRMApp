@@ -8,7 +8,7 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const VTIGER_BASE_URL = 'https://personal1714.od2.vtiger.com'
-  const ACCESS_KEY = 'UipCGbiZmZZsMevM'; 
+  const ACCESS_KEY = 'wUj0Rj5a8X0CyEQa'; 
 
   const getChallenge = async () => {
     try {
@@ -38,6 +38,7 @@ const LoginScreen = ({ navigation }) => {
     const token = await getChallenge();
 
     if (!token) {
+      setLoading(false);
       console.error('Failed to retrieve token');
       return;
     }
@@ -108,7 +109,6 @@ const LoginScreen = ({ navigation }) => {
               placeholder="Enter your password"
               secureTextEntry
             />
-
           </View>
 
           {/* Login Button */}
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
