@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput,Image, Alert, StyleSheet, ActivityIndicator ,TouchableOpacity} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import CryptoJS from 'crypto-js';
+import { ALERT_TYPE, Dialog, Toast } from 'react-native-alert-notification';
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +20,11 @@ const LoginScreen = ({ navigation }) => {
       if (result.success) {
         return result.result.token;
       } else {
-        throw new Error('Failed to get challenge token');
+        Toast.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error',
+          textBody: 'Please check your email and password.',
+        })
       }
     } catch (error) {
       console.error(error);
@@ -33,49 +37,70 @@ const LoginScreen = ({ navigation }) => {
     return hashedAccessKey;
   };
 
-  const login = async () => {
-    setLoading(true);
-    const token = await getChallenge();
-
-    if (!token) {
-      setLoading(false);
-      console.error('Failed to retrieve token');
-      return;
-    }
-
-    const hashedAccessKey = generateAccessKey(token, ACCESS_KEY);
-
-    const loginData = {
-      operation: 'login',
-      username: email,
-      accessKey: hashedAccessKey,
-    };
-
-    try {
-      const response = await fetch(`${VTIGER_BASE_URL}/webservice.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams(loginData).toString(),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        console.log('Login successful! Session:', result.result.sessionName);
-        await AsyncStorage.setItem('sessionid', result.result.sessionName);
-        navigation.navigate('Contacts');
-        setLoading(false);
-      } else {
-        setLoading(false);
-        Alert.alert('Invalid credentials', 'Please check your email and password.');
+  const login = async () => {    
+    if(!email){
+      Toast.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Error',
+        textBody: 'Please enter valid email.',
+      })
+    }else if(!password){
+      Toast.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Error',
+        textBody: 'Please enter valid password.',
+      })
+    }else{
+      setLoading(true);
+      const token = await getChallenge();
+      if (!token) {
+        setLoading(false);     
+        return;
       }
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
-      Alert.alert('Error', 'Something went wrong. Please try again later.');
+  
+      const hashedAccessKey = generateAccessKey(token, ACCESS_KEY);
+  
+      const loginData = {
+        operation: 'login',
+        username: email,
+        accessKey: hashedAccessKey,
+      };
+  
+      try {
+        const response = await fetch(`${VTIGER_BASE_URL}/webservice.php`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams(loginData).toString(),
+        });
+  
+        const result = await response.json();
+  
+        if (result.success) {
+          console.log('Login successful! Session:', result.result.sessionName);
+          await AsyncStorage.setItem('sessionid', result.result.sessionName);
+          navigation.navigate('Contacts');
+          setLoading(false);
+        } else {
+          setLoading(false);
+          Toast.show({
+            type: ALERT_TYPE.DANGER,
+            title: 'Error',
+            textBody: 'Please check your email and password.',
+          })
+        }
+      } catch (error) {
+        console.error(error);
+        setLoading(false);
+        Toast.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error',
+          textBody: 'Something went wrong. Please try again later.',
+        })
+      }
     }
+   
   };
 
   return (

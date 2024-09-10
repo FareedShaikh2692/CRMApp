@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Button } from 'react-native';
+import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, RefreshControl } from 'react-native';
 import { ALERT_TYPE, Dialog, Toast } from 'react-native-alert-notification';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +16,7 @@ const ContactsScreen = ({ navigation }) => {
   const [lastname, setlastname] = useState();
   const [email, setemail] = useState();
   const [phone, setphone] = useState();
+  const [refreshing, setRefreshing] = useState(false);
 
   const getConatactData = async () => {
     setpageLoader(true)
@@ -23,8 +24,7 @@ const ContactsScreen = ({ navigation }) => {
       const sessionId = await AsyncStorage.getItem('sessionid');
       const response = await axios.get(`https://personal1714.od2.vtiger.com/webservice.php?operation=query&sessionName=${sessionId}&query=SELECT * FROM Contacts;`);
       setContacts(response.data.result);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
+    } catch (error) {      
       Toast.show({
         type: ALERT_TYPE.DANGER,
         title: 'Error',
@@ -71,11 +71,10 @@ const ContactsScreen = ({ navigation }) => {
         button: 'close',
       })
     } catch (error) {
-      Dialog.show({
+      Toast.show({
         type: ALERT_TYPE.DANGER,
         title: 'Error',
         textBody: 'Something went wrong. Please try again later.',
-        button: 'close',
       })
       console.error('Error:', error);
     }
@@ -92,7 +91,7 @@ const ContactsScreen = ({ navigation }) => {
       id: item?.id
     };
 
-    const url = 'https://yourdomain.com/webservice.php';
+    const url = 'https://personal1714.od2.vtiger.com/webservice.php';
 
     try {
       const response = await fetch(url, {
@@ -104,17 +103,31 @@ const ContactsScreen = ({ navigation }) => {
       });
 
       const responseText = await response.text();
-      console.log('Raw Response:', responseText);
-
       try {
         const result = JSON.parse(responseText);
         console.log('Delete Response:', result);
+        Dialog.show({
+          type: ALERT_TYPE.SUCCESS,
+          title: 'Success',
+          textBody: 'Deleted Successfully',
+          button: 'close',
+        })
       } catch (jsonError) {
-        console.error('JSON Parse Error:', jsonError);
+        Toast.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error',
+          textBody: 'Something went wrong. Please try again later.',
+        })      
       }
     } catch (error) {
-      console.error('Error:', error);
+      Toast.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Error',
+        textBody: 'Something went wrong. Please try again later.',
+      })      
     }
+    getConatactData()
+    setpageLoader(false)
   }
 
   const updateDetails = (item) => {
@@ -125,12 +138,17 @@ const ContactsScreen = ({ navigation }) => {
     setselectedDetails(item)
     setModalVisible(true)
   }
+  const onRefresh = () => {
 
+    setRefreshing(true);
+    getConatactData()
+      setRefreshing(false);
+  };
   useEffect(() => {
     getConatactData()
   }, []);
 
-  const filteredContacts = contacts.filter(contact =>
+  const filteredContacts = contacts?.filter(contact =>
     contact.firstname.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -148,8 +166,8 @@ const ContactsScreen = ({ navigation }) => {
           },
         ]}
       >
-        <Text style={styles.name}>{item.firstname + (item?.lastname || '')}</Text>
-        <Text style={styles.contactEmail}>{item.email}</Text>
+        <Text style={styles.name}>{item?.firstname + (' '+item?.lastname || '')}</Text>
+        <Text style={styles.contactEmail}>{item?.email || ''}</Text>
       </View>
       <View
         style={[
@@ -178,12 +196,12 @@ const ContactsScreen = ({ navigation }) => {
           >
             <Icon name="visibility" size={20} color="#28A745" />
           </TouchableOpacity>
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={[styles.button,]}
             onPress={() => deleteContact(item)}
           >
             <Icon name="delete" size={20} color="#DC3545" />
-          </TouchableOpacity> */}
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -202,7 +220,6 @@ const ContactsScreen = ({ navigation }) => {
           onChangeText={setSearchQuery}
         />
       </View>
-
       {
         pageLoader ? (<ActivityIndicator size="large" color="#0000ff" />) : (<>
           <FlatList
@@ -210,6 +227,13 @@ const ContactsScreen = ({ navigation }) => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             ListEmptyComponent={<Text style={styles.noResultsText}>No contacts found</Text>}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#009688']} // Customize refresh control color
+                progressBackgroundColor="#ffffff" // Customize background color
+              />}
           />
         </>)
       }
